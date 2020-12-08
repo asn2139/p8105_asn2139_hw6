@@ -26,11 +26,81 @@ scale_fill_discrete = scale_fill_viridis_d
 
 ### Problem 1
 
+Loading data
+
 ```{r}
 
 homicide_df = 
-  read_csv("./data/homicide-data.csv") 
+  read_csv("data/homicide-data.csv", na = c("", "NA", "Unknown")) %>% 
+  mutate(
+    city_state = str_c(city, state, sep = ", "),
+    victim_age = as.numeric(victim_age),
+    resolution = case_when(
+      disposition == "Closed without arrest" ~ 0,
+      disposition == "Open/No arrest"        ~ 0,
+      disposition == "Closed by arrest"      ~ 1)
+  ) %>% 
+  filter(
+    victim_race %in% c("White", "Black"),
+    city_state != "Tulsa, AL") %>% 
+  select(city_state, resolution, victim_age, victim_race, victim_sex)
+  
 ```
+
+Start with one city.
+
+```{r}
+baltimore_df=
+  homicide_df %>% 
+  filter(city_state=="Baltimore, MD")
+
+glm(resolution~victim_age+ victim_race + victim_sex, 
+    data=baltimore_df,
+    family=binomial()) %>% 
+  broom::tidy() %>% 
+  mutate(
+    OR= exp(estimate),
+    CI_lower=exp(estimate-1.96 * std.error),
+    CI_upper=exp(estimate+1.96 * std.error)
+  ) %>% 
+  select(term, OR, starts_with("CI")) %>% 
+  knitr::kable(digits=3)
+```
+
+Try across cities.
+
+```{r}
+models_results_df = 
+  homicide_df %>% 
+  nest(data = -city_state) %>% 
+  mutate(
+    models = 
+      map(.x = data, ~glm(resolution ~ victim_age + victim_race + victim_sex, data = .x, family = binomial())),
+    results = map(models, broom::tidy)
+  ) %>% 
+  select(city_state, results) %>% 
+  unnest(results) %>% 
+  mutate(
+    OR = exp(estimate),
+    CI_lower = exp(estimate - 1.96 * std.error),
+    CI_upper = exp(estimate + 1.96 * std.error)
+  ) %>% 
+  select(city_state, term, OR, starts_with("CI")) 
+  
+```
+
+Male vs Female Homicide Resolutions
+
+```{r}
+models_results_df %>% 
+  filter(term=="victim_sexMale") %>% 
+mutate(city_state=fct_reorder(city_state, OR)) %>% 
+  ggplot(aes(x=city_state, y=OR))+
+  geom_point()+
+  geom_errorbar(aes(ymin=CI_lower, ymax=CI_upper))+
+  theme(axis.text.x= element_text (angle=90, vjust=0.5, hjust=1))
+```
+
 
 ### Problem 2
 
@@ -39,13 +109,177 @@ Load and clean the data for regression analysis (i.e. convert numeric to factor 
 ```{r}
 
 birth_weight_df = 
-  read_csv("./data/birthweight.csv") 
+  read_csv("./data/birthweight.csv") %>%   
+janitor::clean_names() %>% 
+  mutate(
+   frace = as.factor(frace),
+   frace = recode(frace,
+    "1" = "White", 
+    "2" = "Black", 
+    "3" = "Asian", 
+    "4" = "Puerto Rican", 
+    "8" = "Other", 
+    "9" = "Unknown"),
+   mrace = as.factor(mrace),
+   mrace = recode(mrace, 
+    "1" = "White", 
+    "2" = "Black", 
+    "3" = "Asian", 
+    "4" = "Puerto Rican", 
+    "8" = "Other"),
+   babysex = as.factor(babysex),
+   babysex = recode(babysex, 
+     "1" = "male", 
+    "2" = "female"),
+   malform = as.factor(malform),
+   malform = recode(malform,
+    "0" = "absent", 
+    "1" = "present")) %>% 
+  filter(
+    frace %in% c("White", "Black", "Puerto Rican")
+  )
 ```
 
 
-Propose a regression model for birthweight. This model may be based on a hypothesized structure for the factors that underly birthweight, on a data-driven model-building process, or a combination of the two. Describe your modeling process and show a plot of model residuals against fitted values – use add_predictions and add_residuals in making this plot.
+I propose that `blength`, `delwt`, `bhead`,`parity`, `mrace`,  `fincome`, `smoken`, and `pnumlbw` would be in the model. I chose baby's length at birth, baby's head circumference, mother's weight at delivery, mother's number of live births before this pregnancy,average number of cigarettes smoked per day during pregnancy,and previous number of low birth weight babies since these variables are relevant to gestational and newborn development. I chose race and family monthly income since they are socioeconomic factors that could impact baby's birthweight.
+
+```{r}
+birth_weight_df %>% 
+  mutate(
+    mrace=fct_infreq(mrace)
+  )
+```
+
+Baby's Length
+
+```{r}
+length_fit = lm(bwt ~ blength, data = birth_weight_df)
+length_fit %>% 
+  broom::tidy() %>% 
+  select(term, estimate, p.value) %>% 
+  knitr::kable(digits=3)
+```
+
+
+Baby's Head Circumference
+
+```{r}
+head_fit = lm(bwt ~ bhead, data = birth_weight_df)
+head_fit %>% 
+  broom::tidy() %>% 
+  select(term, estimate, p.value) %>% 
+  knitr::kable(digits=3)
+```
+
+
+Mother's Weight at Delivery
+
+```{r}
+dlw_fit = lm(bwt ~ delwt, data = birth_weight_df)
+dlw_fit %>% 
+  broom::tidy() %>% 
+  select(term, estimate, p.value) %>% 
+  knitr::kable(digits=3)
+```
+
+
+Mother's Number of Live Births Before Pregnancy
+
+```{r}
+parity_fit = lm(bwt ~ parity, data = birth_weight_df)
+parity_fit %>% 
+  broom::tidy() %>% 
+  select(term, estimate, p.value) %>% 
+  knitr::kable(digits=3)
+```
+
+
+Average Number of Cigarettes Smoked per Day 
+
+```{r}
+smoke_fit = lm(bwt ~ smoken, data = birth_weight_df)
+smoke_fit %>% 
+  broom::tidy() %>% 
+  select(term, estimate, p.value) %>% 
+  knitr::kable(digits=3)
+```
+
+
+Previous Number of Low Births Before Pregnancy
+
+```{r}
+pnumlbw_fit = lm(bwt ~ pnumlbw, data = birth_weight_df)
+head_fit %>% 
+  broom::tidy() %>% 
+  select(term, estimate, p.value) %>% 
+  knitr::kable(digits=3)
+```
+
+Out of all of these linear models, the only non-significant one was Mother's Number of Live Births Before Pregnancy so I made a new model with the significant variables so far.
+
+```{r}
+together_fit=lm(bwt ~ bhead+ blength+ delwt + smoken, data=birth_weight_df) 
+
+together_fit %>% 
+  broom::tidy() %>% 
+  select(term, estimate, p.value) %>% 
+  knitr::kable(digits=3)
+```
+
+
+Now I added in the sociodemographic factors to see if they also were related.
+
+Mother Race
+
+```{r}
+mrace_fit = lm(bwt ~ mrace, data = birth_weight_df)
+mrace_fit %>% 
+  broom::tidy() %>% 
+  select(term, estimate, p.value) %>% 
+  knitr::kable(digits=3)
+```
+
+Family Income
+```{r}
+fincome_fit = lm(bwt ~ fincome, data = birth_weight_df)
+fincome_fit %>% 
+  broom::tidy() %>% 
+  select(term, estimate, p.value) %>% 
+  knitr::kable(digits=3)
+```
+
+Both family income and race were also significant predictors in the dataset so I added them to my final linear model. 
+
+```{r}
+final_fit=lm(bwt ~ bhead+ blength+ delwt + smoken+ mrace+fincome, data=birth_weight_df) 
+
+final_fit %>% 
+  broom::tidy() %>% 
+  select(term, estimate, p.value) %>% 
+  knitr::kable(digits=3)
+```
+
+Plot of model residuals against fitted values
+
+```{r}
+residuals_df = 
+  birth_weight_df %>% 
+  modelr::add_residuals(final_fit) %>% 
+  modelr::add_predictions(final_fit) %>% 
+  ggplot(aes(x = pred, y = resid)) +
+  geom_point() +
+  geom_smooth(se = FALSE) +
+  labs(
+    x = "Predicted birthweight", 
+    y = "Residuals", 
+    title = "Residuals Against Fitted Values")
+
+residuals_df
+```
+```
 
 Compare your model to two others:
+
 
 One using length at birth and gestational age as predictors (main effects only)
 One using head circumference, length, sex, and all interactions (including the three-way interaction) between these
