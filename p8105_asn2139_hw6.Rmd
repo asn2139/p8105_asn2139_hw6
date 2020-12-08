@@ -282,7 +282,24 @@ Compare your model to two others:
 
 
 One using length at birth and gestational age as predictors (main effects only)
-One using head circumference, length, sex, and all interactions (including the three-way interaction) between these
+
+```{r}
+fit_1 = lm(bwt ~ blength + gaweeks, data = birth_weight_df)
+fit_1 %>% 
+  broom::tidy() %>% 
+  select(term, estimate, p.value) %>% 
+  knitr::kable(digits = 3)
+```
+One using head circumference, length, sex, and all interactions (including the three-way interaction) between these.
+
+```{r}
+fit_2 = lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead*babysex + blength*babysex + bhead*blength*babysex, data = birth_weight_df) 
+      
+fit_2 %>% 
+  broom::tidy() %>% 
+  select(term, estimate, p.value) %>% 
+  knitr::kable(digits = 3)
+```
 Make this comparison in terms of the cross-validated prediction error; use crossv_mc and functions in purrr as appropriate.
 
 ### Problem 3
