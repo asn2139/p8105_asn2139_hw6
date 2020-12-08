@@ -107,13 +107,12 @@ mutate(city_state=fct_reorder(city_state, OR)) %>%
 Load and clean the data for regression analysis (i.e. convert numeric to factor where appropriate, check for missing data, etc.).
 
 ```{r}
-
 birth_weight_df = 
   read_csv("./data/birthweight.csv") %>%   
 janitor::clean_names() %>% 
   mutate(
-   frace = as.factor(frace),
-   frace = recode(frace,
+   race = as.factor(frace),
+   race = recode(race,
     "1" = "White", 
     "2" = "Black", 
     "3" = "Asian", 
@@ -127,28 +126,18 @@ janitor::clean_names() %>%
     "3" = "Asian", 
     "4" = "Puerto Rican", 
     "8" = "Other"),
-   babysex = as.factor(babysex),
-   babysex = recode(babysex, 
+   sex = as.factor(babysex),
+   sex = recode(babysex, 
      "1" = "male", 
     "2" = "female"),
    malform = as.factor(malform),
    malform = recode(malform,
     "0" = "absent", 
-    "1" = "present")) %>% 
-  filter(
-    frace %in% c("White", "Black", "Puerto Rican")
-  )
+    "1" = "present")) 
 ```
 
 
 I propose that `blength`, `delwt`, `bhead`,`parity`, `mrace`,  `fincome`, `smoken`, and `pnumlbw` would be in the model. I chose baby's length at birth, baby's head circumference, mother's weight at delivery, mother's number of live births before this pregnancy,average number of cigarettes smoked per day during pregnancy,and previous number of low birth weight babies since these variables are relevant to gestational and newborn development. I chose race and family monthly income since they are socioeconomic factors that could impact baby's birthweight.
-
-```{r}
-birth_weight_df %>% 
-  mutate(
-    mrace=fct_infreq(mrace)
-  )
-```
 
 Baby's Length
 
