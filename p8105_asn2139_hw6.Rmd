@@ -276,8 +276,6 @@ residuals_df =
 
 residuals_df
 ```
-```
-
 Compare your model to two others:
 
 
@@ -301,6 +299,30 @@ fit_2 %>%
   knitr::kable(digits = 3)
 ```
 Make this comparison in terms of the cross-validated prediction error; use crossv_mc and functions in purrr as appropriate.
+
+```{r}
+
+comparison_df = crossv_mc(birth_weight_df, 100)
+comparison_results = comparison_df %>% 
+  mutate(
+    final_fit = map(train, ~lm(bwt ~ blength + gaweeks + mrace + fincome + smoken + blength*gaweeks, data = birth_weight_df)), 
+    fit2 = map(train, ~lm(bwt ~ blength + gaweeks, data = birth_weight_df)),
+    fit3 = map(train, ~lm(bwt ~ bhead + blength + babysex + bhead * blength + bhead * babysex + blength * babysex +  bhead * blength * babysex, data =birth_weight_df)),
+    rmse_final_fit = map2_dbl(final_fit, test, ~rmse(model = .x, data = .y)), 
+    rmse_main = map2_dbl(fit2, test, ~rmse(model = .x, data = .y)),
+    rmse_interact = map2_dbl(fit3, test, ~rmse(model = .x, data = .y))
+  )
+
+comparison_results %>% 
+  select(starts_with("rmse")) %>% 
+  pivot_longer(
+    everything(),
+    names_to = "model", 
+    values_to = "rmse",
+    names_prefix = "rmse_") %>% 
+  mutate(model = fct_inorder(model)) %>% 
+  ggplot(aes(x = model, y = rmse)) + geom_violin()
+```
 
 ### Problem 3
 
