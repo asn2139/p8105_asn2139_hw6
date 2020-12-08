@@ -26,6 +26,12 @@ scale_fill_discrete = scale_fill_viridis_d
 
 ### Problem 1
 
+```{r}
+
+homicide_df = 
+  read_csv("./data/homicide-data.csv") 
+```
+
 ### Problem 2
 
 Load and clean the data for regression analysis (i.e. convert numeric to factor where appropriate, check for missing data, etc.).
