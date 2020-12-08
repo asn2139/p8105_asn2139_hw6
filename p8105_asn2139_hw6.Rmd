@@ -340,3 +340,48 @@ weather_df =
   select(name, id, everything())
 ```
 
+```{r}
+w_bootstrap = 
+  weather_df %>% 
+  modelr::bootstrap(n = 5000) %>% 
+  mutate(
+    models = map(strap, ~ lm(tmax ~ tmin, data = .x)),
+    tidy_results = map(models, broom::tidy),  
+    glance_results = map(models, broom::glance)) %>% 
+  unnest(tidy_results, glance_results) %>% 
+  select(.id, r.squared, estimate, term)
+
+```
+
+```{r}
+w_bootstrap_2 = 
+  w_bootstrap %>% 
+  select(-.id) %>% 
+  pivot_wider(
+    names_from = term,
+    values_from = estimate) %>% 
+   rename(
+    b0 = `(Intercept)`,
+    b1 = tmin) %>% 
+  mutate(log_results = log(b0*b1))
+```
+
+Plot the distribution of your estimates, and describe these in words. 
+R squared estimated
+```{r}
+w_bootstrap_2 %>% 
+  ggplot(aes(x = r.squared)) +
+  geom_density() +
+  labs(title = "Distribution or R^2",
+       x = "R^2 Estmates")
+```
+
+```{r}
+w_bootstrap_2 %>% 
+  ggplot(aes(x = log_results)) +
+  geom_density() +
+  labs(title = "Distribution of Log Estimates",
+       x = "Log estimates")
+```
+
+
