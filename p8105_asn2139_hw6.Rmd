@@ -265,6 +265,10 @@ residuals_df =
 
 residuals_df
 ```
+Comments on my model:
+
+It looks there is just a very large cluster of values that are between 2000 and 4000 that don't follow a particular pattern. The linear regression model that I made doesn't seem to really follow the values after around a predicted birthweight of around 2000 grams.
+
 Compare your model to two others:
 
 
@@ -312,6 +316,7 @@ comparison_results %>%
   mutate(model = fct_inorder(model)) %>% 
   ggplot(aes(x = model, y = rmse)) + geom_violin()
 ```
+Comparison of errors: The plot above indicates that the interact model has the least RMSE and is probably the best fit model compared to the linear model that I made as well as the main model suggested by Problem 2.
 
 ### Problem 3
 
@@ -379,5 +384,5 @@ quantile(pull(w_bootstrap_2, r.squared), probs = c(0.025, 0.975))
 quantile(pull(w_bootstrap_2, log_results), probs = c(0.025, 0.975))
 ```
 
-The 95% CI for r^2 is .
-The 95% CI for log(b0*b1) is.
+The 95% CI for r^2 is between 0.894 and 0.927 .
+The 95% CI for log(b0*b1) is between 1.965 and 2.060.
