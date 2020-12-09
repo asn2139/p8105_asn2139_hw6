@@ -373,4 +373,11 @@ w_bootstrap_2 %>%
        x = "Log estimates")
 ```
 
+```{r}
+quantile(pull(w_bootstrap_2, r.squared), probs = c(0.025, 0.975))
 
+quantile(pull(w_bootstrap_2, log_results), probs = c(0.025, 0.975))
+```
+
+The 95% CI for r^2 is .
+The 95% CI for log(b0*b1) is.
